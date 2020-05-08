@@ -1,0 +1,276 @@
+/home/gbryk/.conda/envs/h2o4gpuenv/bin/python /home/gbryk/Studia/IwM/PUT-IWM-Retina/RetinaSegmentator.py
+Preparing
+99644 Finished
+99647 Finished
+99650 Finished
+99653 Finished
+99656 Finished
+99659 Finished
+99662 Finished
+99665 Finished
+99668 Finished
+99671 Finished
+99674 Finished
+99677 Finished
+99678 Finished
+99679 Finished
+99680 Finished
+99681 Finished
+99683 Finished
+99684 Finished
+99686 Finished
+99687 Finished
+All processes finished
+To tuple took 328.9918580055237s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 217857
+Shuffling took 0.18669795989990234s
+Zipping took 1.116899013519287s
+Splitting
+Scaling
+Fitting
+0.865301860160885
+Dumped model to models36resized/1/model0.865301860160885.joblib
+Calculating features
+Prediction
+		Balance 1:1	Try 1	absdiff: 23135130
+Calculating features
+Prediction
+		Balance 1:1	Try 2	absdiff: 24967305
+Preparing
+100254 Finished
+100257 Finished
+100260 Finished
+100263 Finished
+100266 Finished
+100269 Finished
+100272 Finished
+100275 Finished
+100278 Finished
+100281 Finished
+100284 Finished
+100288 Finished
+100289 Finished
+100290 Finished
+100296 Finished
+100306 Finished
+100311 Finished
+100313 Finished
+100317 Finished
+100321 Finished
+All processes finished
+To tuple took 327.31869554519653s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 435714
+Shuffling took 0.35874509811401367s
+Zipping took 1.2640902996063232s
+Splitting
+Scaling
+Fitting
+0.8858967983781509
+Dumped model to models36resized/2/model0.8858967983781509.joblib
+Calculating features
+Prediction
+		Balance 1:2	Try 1	absdiff: 14866245
+Calculating features
+Prediction
+		Balance 1:2	Try 2	absdiff: 20954370
+Preparing
+100565 Finished
+100568 Finished
+100571 Finished
+100574 Finished
+100577 Finished
+100580 Finished
+100583 Finished
+100586 Finished
+100589 Finished
+100592 Finished
+100595 Finished
+100599 Finished
+100602 Finished
+100603 Finished
+100604 Finished
+100605 Finished
+100606 Finished
+100613 Finished
+100629 Finished
+100631 Finished
+All processes finished
+To tuple took 327.43240451812744s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 653571
+Shuffling took 0.5224380493164062s
+Zipping took 1.396069049835205s
+Splitting
+Scaling
+Fitting
+0.9013001618030134
+Dumped model to models36resized/3/model0.9013001618030134.joblib
+Calculating features
+Prediction
+		Balance 1:3	Try 1	absdiff: 14549280
+Calculating features
+Prediction
+		Balance 1:3	Try 2	absdiff: 17806395
+Preparing
+100885 Finished
+100888 Finished
+100891 Finished
+100894 Finished
+100897 Finished
+100900 Finished
+100903 Finished
+100906 Finished
+100909 Finished
+100912 Finished
+100915 Finished
+100921 Finished
+100922 Finished
+100923 Finished
+100924 Finished
+100925 Finished
+100926 Finished
+100927 Finished
+100947 Finished
+100952 Finished
+All processes finished
+To tuple took 326.6021957397461s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 871428
+Shuffling took 0.6871378421783447s
+Zipping took 1.5937252044677734s
+Splitting
+Scaling
+Fitting
+0.9167114207943743
+Dumped model to models36resized/4/model0.9167114207943743.joblib
+Calculating features
+Prediction
+		Balance 1:4	Try 1	absdiff: 13145505
+Calculating features
+Prediction
+		Balance 1:4	Try 2	absdiff: 17682210
+Preparing
+101219 Finished
+101222 Finished
+101225 Finished
+101228 Finished
+101231 Finished
+101234 Finished
+101237 Finished
+101240 Finished
+101243 Finished
+101246 Finished
+101249 Finished
+101252 Finished
+101254 Finished
+101255 Finished
+101256 Finished
+101269 Finished
+101276 Finished
+101280 Finished
+101285 Finished
+101287 Finished
+All processes finished
+To tuple took 327.4757192134857s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 1089285
+Shuffling took 0.8534107208251953s
+Zipping took 1.789069414138794s
+Splitting
+Scaling
+Fitting
+0.9246755333187978
+Dumped model to models36resized/5/model0.9246755333187978.joblib
+Calculating features
+Prediction
+		Balance 1:5	Try 1	absdiff: 13747305
+Calculating features
+Prediction
+		Balance 1:5	Try 2	absdiff: 18852915
+Preparing
+101565 Finished
+101568 Finished
+101571 Finished
+101574 Finished
+101577 Finished
+101580 Finished
+101583 Finished
+101586 Finished
+101589 Finished
+101592 Finished
+101595 Finished
+101599 Finished
+101600 Finished
+101601 Finished
+101602 Finished
+101603 Finished
+101604 Finished
+101615 Finished
+101626 Finished
+101631 Finished
+All processes finished
+To tuple took 325.837443113327s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 1307142
+Shuffling took 1.0217854976654053s
+Zipping took 1.8850672245025635s
+Splitting
+Scaling
+Fitting
+0.9330688524590164
+Dumped model to models36resized/6/model0.9330688524590164.joblib
+Calculating features
+Prediction
+		Balance 1:6	Try 1	absdiff: 13139640
+Calculating features
+Prediction
+		Balance 1:6	Try 2	absdiff: 18353370
+Preparing
+101861 Finished
+101864 Finished
+101867 Finished
+101870 Finished
+101873 Finished
+101876 Finished
+101879 Finished
+101882 Finished
+101885 Finished
+101888 Finished
+101891 Finished
+101896 Finished
+101897 Finished
+101898 Finished
+101899 Finished
+101900 Finished
+101901 Finished
+101922 Finished
+101925 Finished
+101930 Finished
+All processes finished
+To tuple took 325.0913407802582s
+Results negative: 2204223
+Results positive: 217857
+Desired negative sample: 1524999
+Shuffling took 1.1840343475341797s
+Zipping took 1.9983386993408203s
+Splitting
+Scaling
+Fitting
+0.938853378928887
+Dumped model to models36resized/7/model0.938853378928887.joblib
+Calculating features
+Prediction
+		Balance 1:7	Try 1	absdiff: 13447935
+Calculating features
+Prediction
+		Balance 1:7	Try 2	absdiff: 17933385
+
+Process finished with exit code 0

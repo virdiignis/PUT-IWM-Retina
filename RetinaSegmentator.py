@@ -1,12 +1,15 @@
+import time
+from itertools import chain
 from multiprocessing import Manager, Pool
 from multiprocessing import Process
+import random
 
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
-from h2o4gpu.neural_network import MLPClassifier
-from h2o4gpu.preprocessing import StandardScaler
-from h2o4gpu.model_selection import train_test_split, cross_val_score
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split, cross_val_score
 from joblib import dump, load
 
 
@@ -16,6 +19,7 @@ class RetinaSegmentator:
 
     @classmethod
     def classical_deconstruction(cls, image):
+        image = plt.imread(image)
         orig_image = image
         image = cls._basic_processing(image)
 
@@ -26,19 +30,23 @@ class RetinaSegmentator:
 
         image = cv.bilateralFilter(image, 5, 210, 30)
         image = cv.medianBlur(image, 9)
-        image = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 31, 3)  # 61, 4
+
+        image = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 41, 4)  # 61, 4
+
         image = cv.bilateralFilter(image, 5, 70, 10)
         image = cv.medianBlur(image, 9)
 
         im = np.array(orig_image)
         im[image > 50] = [0, 255, 255]
         plt.imshow(im, cmap='gray')
+        plt.axis("off")
         plt.show()
+        quit()
         return image
 
     def reconstruct_and_compare(self, i):
-        source = cv.imread(f"images/{i:02d}_h.jpg")
-        mask = cv.imread(f"images/masked/{i:02d}_h.tif", cv.IMREAD_GRAYSCALE)
+        source = plt.imread(f"training/{i:02d}_h.jpg")
+        mask = plt.imread(f"training/masked/{i:02d}_h.tif", cv.IMREAD_GRAYSCALE)
 
         rec = self.classical_deconstruction(source)
         self.show_difference(rec, mask)
@@ -52,7 +60,7 @@ class RetinaSegmentator:
 
     @staticmethod
     def _basic_processing(image):
-        image = (image[::, ::, 1] * 2.3) - (image[::, ::, 0] * 1.7)
+        image = (image[::, ::, 1] * 2.3) - (image[::, ::, 2] * 1.7)
         image = image * 255 / image.max()
         image = image.clip(0, 255)
         image = image.astype('uint8')
@@ -61,13 +69,12 @@ class RetinaSegmentator:
     @staticmethod
     def _get_fragment_features(data: tuple):
         fragment, y, x = data
-        features = [
-            y,
-            x,
+        features = list(fragment.reshape(25))
+        features.extend([
             fragment.mean(),
             np.median(fragment),
             np.min(fragment),
-            np.max(fragment)]
+            np.max(fragment)])
 
         moments = cv.moments(fragment)
 
@@ -75,7 +82,7 @@ class RetinaSegmentator:
 
         # features.extend(map(log, moments))
         features.extend(map(log, cv.HuMoments(moments)))
-        return np.array(features)
+        return features
 
     @staticmethod
     def _split_image(image: np.ndarray, pro_mask: np.ndarray = None, step: int = 5):
@@ -86,18 +93,17 @@ class RetinaSegmentator:
                 else:
                     yield image[y:y + 5, x:x + 5], y + 2, x + 2, pro_mask[y + 2, x + 2] > 127
 
-    def _prepare_dataset(self):
-        print("divided data not found")
+    def _prepare_dataset(self, s):
         m = Manager()
         results_negative = m.list()
         results_positive = m.list()
 
         def _process_file(i, results_positive, results_negative):
             # r = []
-            source = cv.imread(f"images/{i:02d}_h.jpg")
+            source, _, _ = self._read_image(f"training/{i:02d}.jpg")
             source = RetinaSegmentator._basic_processing(source)
-            mask = cv.imread(f"images/masked/{i:02d}_h.tif", cv.IMREAD_GRAYSCALE)
-            for fragment, y, x, label in self._split_image(source, mask):
+            mask, _, _ = self._read_image(f"training/masked/{i:02d}.tif")
+            for fragment, y, x, label in self._split_image(source, mask, step=1):
                 if label:
                     results_positive.append((self._get_fragment_features((fragment, y, x)), label))
                 else:
@@ -106,76 +112,131 @@ class RetinaSegmentator:
             # result.extend(r)
 
         processes = []
-        for i in range(1, 16):
+        for i in range(1, 21):
             p = Process(target=_process_file, args=(i, results_positive, results_negative))
             processes.append(p)
             p.start()
 
         for p in processes:
             p.join()
+            print(f"{p.pid} Finished")
 
+        print("All processes finished")
         # dump(result, 'splitted_images.joblib')
         # print("dumped!")
-        results_negative = np.array(results_negative)
-        results_positive.extend(
-            results_negative[np.random.randint(results_negative.shape[0], size=len(results_positive)), :])
+        # results_negative = np.array(results_negative)
+        print("To tuple", end=" ")
+        t = time.time()
+        results_positive = tuple(results_positive)
+        # dump(results_positive, "/mnt/results_positive")
+        # print("Dumped positive")
+        results_negative = tuple(results_negative)
+        # dump(results_negative, "/mnt/results_negative")
+        # print("Dumped negative")
+        print(f"took {time.time() - t}s")
 
-        dataset, labels = list(zip(*results_positive))
+        print(f"Results negative: {len(results_negative)}")
+        print(f"Results positive: {len(results_positive)}")
+        print(f"Desired negative sample: {len(results_positive) * s}")
+        print("Shuffling", end=" ")
+        t = time.time()
+        result = chain(results_positive, random.sample(results_negative, len(results_positive) * s))
+        print(f"took {time.time() - t}s")
+
+        print("Zipping", end=" ")
+        t = time.time()
+        dataset, labels = tuple(zip(*result))
+        print(f"took {time.time() - t}s")
 
         return dataset, labels
 
-    def train_model(self):
+    def train_model(self, s):
         # self._training_data = load("training_data.joblib")
         print("Preparing")
-        dataset, labels = self._prepare_dataset()
+        dataset, labels = self._prepare_dataset(s)
+
         print("Splitting")
         X_train, X_test, Y_train, Y_test = train_test_split(dataset, labels, test_size=0.2)
         # X_train, Y_train = dataset, labels
         print("Scaling")
         scaler = StandardScaler()
-        scaler.fit(X_train)
-        X_train = scaler.transform(X_train)
+        scaler.fit(dataset)
+        dataset = scaler.transform(dataset)
+        # X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
 
-        # self._training_data = X_test, X_train, Y_test, Y_train, scaler
-        # dump(self._training_data, "training_data.joblib")
-        # X_test, X_train, Y_test, Y_train, scaler = self._training_data
-
+        clf = MLPClassifier(hidden_layer_sizes=(15, 7, 2), max_iter=1000)
         print("Fitting")
-        best = 0.87
-        for i in range(100):
-            clf = MLPClassifier(hidden_layer_sizes=(15, 7, 2), max_iter=500)
-            clf.fit(X_train, Y_train)
-            # scores = cross_val_score(clf, X_train, Y_train, cv=6, n_jobs=-1)
-            # print(scores)
-            score = clf.score(X_test, Y_test)
-            print(score)
-            if score > best:
-                best = score
-            dump(scaler, f"scaler{score}.joblib")
-            dump(clf, f"model{score}.joblib")
+        clf.fit(dataset, labels)
+        # scores = cross_val_score(clf, X_train, Y_train, cv=6, n_jobs=-1)
+        # print(scores)
+        score = clf.score(X_test, Y_test)
+        print(score)
+        dump(scaler, f"models36resized/{s}/scaler{score}.joblib")
+        dump(clf, f"models36resized/{s}/model{score}.joblib")
+        print(f"Dumped model to models36resized/{s}/model{score}.joblib")
+
+        del X_train, X_test, Y_train, Y_test
+        return clf, scaler
 
     def nn_reconstruction(self, path, model=None, scaler=None):
         if model is None:
             model = "model.joblib"
             scaler = "scaler.joblib"
 
-        clf = load(model)
-        scaler = load(scaler)
-        imo = cv.imread(path)
+        if type(model) == str and type(scaler) == str:
+            model = load(model)
+            scaler = load(scaler)
+
+        imo, vshape, hshape = self._read_image(path)
         im = self._basic_processing(imo)
         imp = np.pad(im, 2, constant_values=0)
         split = self._split_image(imp, step=1)
+
+        # _proccess = lambda f: clf.predict(scaler.transform([self._get_fragment_features(f)]))[0]
+
         print("Calculating features")
         data = self._pool.map(self._get_fragment_features, split)
         data = scaler.transform(data)
         print("Prediction")
-        points = clf.predict(data)
+        points = model.predict(data)
+
+        # points = np.array(tuple(map(_proccess, split)))
         points.shape = np.array(im.shape)
 
         imo[points] = [0, 255, 255]
-        plt.imshow(imo)
-        plt.show()
+
+        points = points.astype('uint8')
+        mask = cv.resize(points, (hshape, vshape))
+        mask = mask * 255
+
+        suffix = random.randint(1, 100000000)
+        plt.imsave(f"models36resized/mask{suffix}.png", mask, cmap="gray")
+
+        imo = cv.resize(imo, (hshape, vshape))
+        plt.imsave(f"models36resized/imo{suffix}.png", imo, cmap="gray")
+
+        # plt.imshow(imo)
+        # plt.axis("off")
+        # plt.show()
+
+        return mask
+
+    @staticmethod
+    def _read_image(path):
+        im = plt.imread(path)
+        im = np.array(im).astype('uint8')
+        org_shape = im.shape
+        im = cv.resize(im, (700, 700))
+        return im, org_shape[0], org_shape[1]
+
+    def _find_best_balance(self):
+        for i in range(1, 8):
+            clf, scaler = self.train_model(i)
+            for j in range(1, 3):
+                rmask = self.nn_reconstruction(f"validate/{j:02d}.jpg", clf, scaler)
+                pmask = plt.imread(f"validate/{j:02d}.tif")
+                print(f"\t\tBalance 1:{i}\tTry {j}\tabsdiff: {np.sum(cv.absdiff(rmask, pmask))}")
 
     def __del__(self):
         self._pool.close()
@@ -183,7 +244,10 @@ class RetinaSegmentator:
 
 if __name__ == '__main__':
     r = RetinaSegmentator()
-    r.train_model()
-    # r.nn_reconstruction("images/01_h.jpg", "modelexy/model0.8275350497347662.joblib", "modelexy/scaler0.8275350497347662.joblib")
-    # for i in range(1, 16):
-    #     r.nn_reconstruction(f"images/{i:02d}_h.jpg")
+    r._find_best_balance()
+    # for s in range(2, 9):
+    # r.train_model(4)
+    # r.nn_reconstruction("training/01.jpg", "models36resized/4/model0.9153591930626876.joblib", "models36resized/4/scaler0.9153591930626876.joblib")
+    # r.classical_deconstruction("training/01_h.jpg")
+    # for s in range(1, 16):
+    #     r.nn_reconstruction(f"training/{s:02d}_h.jpg")
