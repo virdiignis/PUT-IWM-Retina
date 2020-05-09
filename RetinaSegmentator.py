@@ -41,7 +41,6 @@ class RetinaSegmentator:
         plt.imshow(im, cmap='gray')
         plt.axis("off")
         plt.show()
-        quit()
         return image
 
     def reconstruct_and_compare(self, i):
@@ -181,8 +180,8 @@ class RetinaSegmentator:
 
     def nn_reconstruction(self, path, model=None, scaler=None):
         if model is None:
-            model = "model.joblib"
-            scaler = "scaler.joblib"
+            model = "models36resized/4/model0.9153591930626876.joblib"
+            scaler = "models36resized/4/scaler0.9153591930626876.joblib"
 
         if type(model) == str and type(scaler) == str:
             model = load(model)
@@ -210,15 +209,15 @@ class RetinaSegmentator:
         mask = cv.resize(points, (hshape, vshape))
         mask = mask * 255
 
-        suffix = random.randint(1, 100000000)
-        plt.imsave(f"models36resized/mask{suffix}.png", mask, cmap="gray")
+        # suffix = random.randint(1, 100000000)
+        # plt.imsave(f"models36resized/mask{suffix}.png", mask, cmap="gray")
 
         imo = cv.resize(imo, (hshape, vshape))
-        plt.imsave(f"models36resized/imo{suffix}.png", imo, cmap="gray")
+        # plt.imsave(f"models36resized/imo{suffix}.png", imo, cmap="gray")
 
-        # plt.imshow(imo)
-        # plt.axis("off")
-        # plt.show()
+        plt.imshow(imo)
+        plt.axis("off")
+        plt.show()
 
         return mask
 
@@ -238,13 +237,41 @@ class RetinaSegmentator:
                 pmask = plt.imread(f"validate/{j:02d}.tif")
                 print(f"\t\tBalance 1:{i}\tTry {j}\tabsdiff: {np.sum(cv.absdiff(rmask, pmask))}")
 
+    def test(self):
+        for i in range(7, 15):
+            pmask = np.array(plt.imread(f"test/{i:02d}.png")).astype("uint8")
+            cmask = self.classical_deconstruction(f"test/{i:02d}.jpg")
+            nmask = self.nn_reconstruction(f"test/{i:02d}.jpg", "models36resized/4/model0.9153591930626876.joblib",
+                                           "models36resized/4/scaler0.9153591930626876.joblib")
+
+            pmask = pmask * 255 / pmask.max()
+            cmask = cmask * 255 / pmask.max()
+            nmask = nmask * 255 / pmask.max()
+            diff = cv.absdiff(cmask.astype("uint8"), nmask.astype("uint8")).astype("uint8")
+            print(f"absdiff: {np.sum(diff)}")
+            plt.imshow(diff, cmap="gray")
+            plt.axis("off")
+            plt.show()
+            diff = cv.absdiff(cmask.astype("uint8"), pmask.astype("uint8")).astype("uint8")
+            print(f"absdiff: {np.sum(diff)}")
+            plt.imshow(diff, cmap="gray")
+            plt.axis("off")
+            plt.show()
+            diff = cv.absdiff(nmask.astype("uint8"), pmask.astype("uint8")).astype("uint8")
+            print(f"absdiff: {np.sum(diff)}")
+            plt.imshow(diff, cmap="gray")
+            plt.axis("off")
+            plt.show()
+            pass
+
     def __del__(self):
         self._pool.close()
 
 
 if __name__ == '__main__':
     r = RetinaSegmentator()
-    r._find_best_balance()
+    r.test()
+    # r._find_best_balance()
     # for s in range(2, 9):
     # r.train_model(4)
     # r.nn_reconstruction("training/01.jpg", "models36resized/4/model0.9153591930626876.joblib", "models36resized/4/scaler0.9153591930626876.joblib")
