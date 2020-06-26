@@ -7,6 +7,7 @@ import random
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix, plot_confusion_matrix
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -84,7 +85,7 @@ class RetinaSegmentator:
         return features
 
     @staticmethod
-    def _split_image(image: np.ndarray, pro_mask: np.ndarray = None, step: int = 5):
+    def _split_image(image: np.ndarray, pro_mask: np.ndarray = None, step: int = 3):
         for y in range(0, image.shape[0] - 4, step):
             for x in range(0, image.shape[1] - 4, step):
                 if pro_mask is None:
@@ -102,7 +103,7 @@ class RetinaSegmentator:
             source, _, _ = self._read_image(f"training/{i:02d}.jpg")
             source = RetinaSegmentator._basic_processing(source)
             mask, _, _ = self._read_image(f"training/masked/{i:02d}.tif")
-            for fragment, y, x, label in self._split_image(source, mask, step=1):
+            for fragment, y, x, label in self._split_image(source, mask, step=2):
                 if label:
                     results_positive.append((self._get_fragment_features((fragment, y, x)), label))
                 else:
@@ -160,17 +161,30 @@ class RetinaSegmentator:
         print("Scaling")
         scaler = StandardScaler()
         scaler.fit(dataset)
-        dataset = scaler.transform(dataset)
-        # X_train = scaler.transform(X_train)
+        # dataset = scaler.transform(dataset)
+        X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
 
         clf = MLPClassifier(hidden_layer_sizes=(15, 7, 2), max_iter=1000)
         print("Fitting")
-        clf.fit(dataset, labels)
+        clf.fit(X_train, Y_train)
         # scores = cross_val_score(clf, X_train, Y_train, cv=6, n_jobs=-1)
         # print(scores)
         score = clf.score(X_test, Y_test)
         print(score)
+
+        Y_predicted = clf.predict(X_test)
+
+        print(classification_report(Y_test, Y_predicted))
+        cm = confusion_matrix(Y_test, Y_predicted)
+        print(cm)
+        (tn, fp), (fn, tp) = cm
+        print(f"Czułość: {tp / (tp + fn)}")
+        print(f"Swoistość: {tn / (tn + fp)}")
+
+        plot_confusion_matrix(clf, X_test, Y_test)
+        plt.show()
+
         dump(scaler, f"models36resized/{s}/scaler{score}.joblib")
         dump(clf, f"models36resized/{s}/model{score}.joblib")
         print(f"Dumped model to models36resized/{s}/model{score}.joblib")
@@ -232,10 +246,10 @@ class RetinaSegmentator:
     def _find_best_balance(self):
         for i in range(1, 8):
             clf, scaler = self.train_model(i)
-            for j in range(1, 3):
-                rmask = self.nn_reconstruction(f"validate/{j:02d}.jpg", clf, scaler)
-                pmask = plt.imread(f"validate/{j:02d}.tif")
-                print(f"\t\tBalance 1:{i}\tTry {j}\tabsdiff: {np.sum(cv.absdiff(rmask, pmask))}")
+            # for j in range(1, 3):
+            #     rmask = self.nn_reconstruction(f"validate/{j:02d}.jpg", clf, scaler)
+            #     pmask = plt.imread(f"validate/{j:02d}.tif")
+            #     print(f"\t\tBalance 1:{i}\tTry {j}\tabsdiff: {np.sum(cv.absdiff(rmask, pmask))}")
 
     def test(self):
         for i in range(7, 15):
@@ -267,14 +281,48 @@ class RetinaSegmentator:
     def __del__(self):
         self._pool.close()
 
+    @classmethod
+    def classical_deconstruction_mask(cls, image):
+        image = plt.imread(image)
+        orig_image = image
+        image = cls._basic_processing(image)
+
+        kernel = np.ones((6, 6), np.uint8)
+        image = cv.erode(image, kernel)
+        kernel = np.ones((3, 3), np.uint8)
+        image = cv.dilate(image, kernel)
+
+        image = cv.bilateralFilter(image, 5, 210, 30)
+        image = cv.medianBlur(image, 9)
+
+        image = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 41, 4)  # 61, 4
+
+        image = cv.bilateralFilter(image, 5, 70, 10)
+        image = cv.medianBlur(image, 9)
+
+        mask = np.zeros(image.shape)
+        mask[image > 50] = 1
+
+        return mask
+
+    def classical_stats(self):
+        mask = self.classical_deconstruction_mask("sprawko/3.jpg").astype("bool").flatten()
+        pro_mask = plt.imread("sprawko/3.tif")
+        pro_mask = np.array(pro_mask).astype('bool').flatten()
+        cm = confusion_matrix(pro_mask, mask)
+        print(cm)
+        (tn, fp), (fn, tp) = cm
+        print(f"Czułość: {tp / (tp + fn)}")
+        print(f"Swoistość: {tn / (tn + fp)}")
+
 
 if __name__ == '__main__':
     r = RetinaSegmentator()
-    r.test()
+    # r.test()
     # r._find_best_balance()
     # for s in range(2, 9):
     # r.train_model(4)
-    # r.nn_reconstruction("training/01.jpg", "models36resized/4/model0.9153591930626876.joblib", "models36resized/4/scaler0.9153591930626876.joblib")
-    # r.classical_deconstruction("training/01_h.jpg")
+    # r.nn_reconstruction("sprawko/1.jpg", "models36resized/4/model0.9123775006557142.joblib", "models36resized/4/scaler0.9123775006557142.joblib")
+    r.classical_stats()
     # for s in range(1, 16):
     #     r.nn_reconstruction(f"training/{s:02d}_h.jpg")
